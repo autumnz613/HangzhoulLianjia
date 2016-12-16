@@ -61,22 +61,22 @@ def one_record_spider(chengjiao):
 
     positionInfo = chengjiao.find("div", {"class": "positionInfo"}).text
     info = positionInfo.strip().split(")")
-    floor= info[0].strip()+")"
-    buildtime = info[-1]
+    floor = info[0].strip()+")"
+    build_time = info[-1]
     info_dict['楼层'] = floor
-    info_dict['建造时间'] = buildtime
+    info_dict['建造时间'] = build_time
 
-    dealDate = chengjiao.find("div", {"class": "dealDate"}).get_text().strip()
-    info_dict['签约时间'] =  dealDate
+    deal_date = chengjiao.find("div", {"class": "dealDate"}).get_text().strip()
+    info_dict['签约时间'] =  deal_date
 
     #个别没有成交均价
-    unitPrice = chengjiao.find("div", {"class": "unitPrice"}).find("span")
-    if unitPrice:
-        unitPrice= unitPrice.text+"元/平"
-        info_dict['签约单价'] = unitPrice
+    unit_price = chengjiao.find("div", {"class": "unitPrice"}).find("span")
+    if unit_price:
+        unit_price= unit_price.text+"元/平"
+        info_dict['签约单价'] = unit_price
 
-    totalPrice = chengjiao.find("span", {"class": "number"}).text.strip()+"万"
-    info_dict['签约总价']  = totalPrice
+    total_price = chengjiao.find("span", {"class": "number"}).text.strip()+"万"
+    info_dict['签约总价']  = total_price
 
     traffic = chengjiao.find("div", {"class": "dealHouseInfo"}).text
     if traffic:
@@ -137,7 +137,7 @@ def region_chengjiao_spider(region):
 
     total_pages = 1
     try:
-        page_info= soup.find("div", {"class": "page-box house-lst-page-box"})
+        page_info = soup.find("div", {"class": "page-box house-lst-page-box"})
     except AttributeError as e:
         page_info = None
     if page_info == None:
@@ -145,7 +145,7 @@ def region_chengjiao_spider(region):
     page_info_str = page_info.get("page-data").split(",")[0].split(":")[1]
     total_pages = int(page_info_str)
 
-    #循环实现爬去所有页面
+    #循环实现爬取所有页面
     for i in range(total_pages):
         url_page = u"http://hz.lianjia.com/chengjiao/%s/pg%d/" % (region,i + 1)
         chengjiao_spider(url_page, region)
@@ -155,16 +155,16 @@ def recent_chengjiao_spider(href):
     """
     爬取页面链接中的成交记录
     """
-    total_pages = 100
-
-    #循环实现爬去所有页面
+    total_pages = 100   #根据实际爬取频率确定，一般不大于10
+    flag = 0
+    #循环实现爬取所有页面
     for i in range(total_pages):
         url_page = u"http://hz.lianjia.com/chengjiao/pg%d/" % (i + 1)
 
         try:
             req = urllib2.Request(url_page, headers=hds[random.randint(0, len(hds) - 1)])
             source_code = urllib2.urlopen(req, timeout=10).read()
-            plain_text = unicode(source_code)  # ,errors='ignore')
+            plain_text = unicode(source_code)
             soup = BeautifulSoup(plain_text, "html.parser")
         except (urllib2.HTTPError, urllib2.URLError), e:
             print e
@@ -174,7 +174,6 @@ def recent_chengjiao_spider(href):
         for chengjiao in chengjiao_list:
             info_dict = one_record_spider(chengjiao)
             info_list.append(info_dict)
-
             #已爬取到上次位置
             if (info_dict["链接"]) == href:
                 flag = 1
@@ -208,23 +207,14 @@ def regions_chengjiao_spider():
     print 'done'
 
 
-def exception_write(fun_name, url):
-    """
-    写入异常信息到日志
-    """
-    f = open('log.txt', 'a')
-    line = "%s %s\n" % (fun_name, url)
-    f.write(line)
-    f.close()
-
 if __name__ == "__main__":
+    """
+    传递参数为上次爬取记录最新一条的小区链接，或者为0。必填。
+    """
     href = sys.arg[1]
-
     if href:
         #爬下最新成交记录
         recent_chengjiao_spider(href)
     else:
         # 爬下所有小区里的成交信息
         regions_chengjiao_spider()
-
-    #recent_chengjiao_spider("www.baidu.com")
