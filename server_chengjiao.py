@@ -211,7 +211,7 @@ if __name__ == "__main__":
     """
     传递参数为上次爬取记录最新一条的小区链接，或者为0。必填。
     """
-    href = sys.arg[1]
+    href = sys.argv[1]
     if href:
         #爬下最新成交记录
         recent_chengjiao_spider(href)
