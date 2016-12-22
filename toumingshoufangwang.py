@@ -84,7 +84,7 @@ def gen_jilu_insert_command(info_dict):
     """
     生成小区数据库插入命令
     """
-    info_list = [u"区域", u"楼盘名称", u"链接", u"城区", u"签约套数", u"预定套数", u"签约面积", u"签约均价", u"标识"]
+    info_list = [u"区域", u"楼盘名称", u"链接", u"城区", u"签约套数", u"预定套数", u"签约面积", u"签约均价"]
     t = []
     for il in info_list:
         if il in info_dict:
@@ -92,7 +92,7 @@ def gen_jilu_insert_command(info_dict):
         else:
             t.append('')
     t = tuple(t)
-    insertcommand = (r"insert into xiaoqu values(?,?,?,?,?,?,?,?,?)", t)
+    insertcommand = (r"insert into jilu values(?,?,?,?,?,?,?,?)", t)
     return insertcommand
 
 def transfer(string):
@@ -100,48 +100,31 @@ def transfer(string):
     :param string:
     :return:
     """
-    if(string == "numone"):
+    if(string == [u'numbone']):
         res = "1"
-    elif (string == "numtwo"):
+    elif (string == [u'numbtwo']):
         res = "2"
-    elif (string == "numthree"):
+    elif (string == [u'numbthree']):
         res = "3"
-    elif (string == "numfour"):
+    elif (string == [u'numbfour']):
         res = "4"
-    elif (string == "numfive"):
+    elif (string == [u'numbfive']):
         res = "5"
-    elif (string == "numsix"):
+    elif (string == [u'numbsix']):
         res = "6"
-    elif (string == "numseven"):
+    elif (string == [u'numbseven']):
         res = "7"
-    elif (string == "numeight"):
+    elif (string == [u'numbeight']):
         res = "8"
-    elif (string == "numnine"):
+    elif (string == [u'numbnine']):
         res = "9"
-    elif (string == "numzero"):
+    elif (string == [u'numbzero']):
         res = "0"
-    elif (string == "numdor"):
+    elif (string == [u'numbdor']):
         res = "."
     else:
         res = " "
     return res
-
-def switch(string):
-    dict={
-        "numone"  : "1",
-        "numtwo"  : "2",
-        "numthree": "3",
-        "numfour" : "4",
-        "numfive" : "5",
-        "numsix"  : "6",
-        "numseven": "7",
-        "numeight": "8",
-        "numnine" : "9",
-        "numzero" : "0",
-        "numdor"  : "."
-    }
-    if(string in dict):
-        return dict[string]
 
 
 def do_jilu_spider(db_jilu, link):
@@ -165,13 +148,14 @@ def do_jilu_spider(db_jilu, link):
     将每个区域作为一个子节点获取出来
     可以用.children  find_next_sibling
     """
-    zhuchengqu = data.find("div")
+    zhuchengqu = data.find("div", {"style": "display:block"})
     xiaoshan = zhuchengqu.find_next_sibling("div")
     yuhang = xiaoshan.find_next_sibling("div")
     fuyang = yuhang.find_next_sibling("div")
     dajiangdong = fuyang.find_next_sibling("div")
 
     regions = {zhuchengqu, xiaoshan, yuhang, fuyang, dajiangdong}
+    url_header = "www.tmsf.com"
 
     for region in regions:
         info_dict = {}
@@ -179,17 +163,17 @@ def do_jilu_spider(db_jilu, link):
         all_loupan_info = region.findAll("tr")
         #判断每个楼盘的信息
         for loupan in all_loupan_info:
-            loupan_info = loupan.findAll("td", {"class": "tboder blue2"})
+            loupan_info = loupan.find("td", {"class": "tdborder blue2"})
             if loupan_info:
                 name = loupan_info.get_text()
-                href = loupan_info.a.get("href")
+                href = url_header + loupan_info.a.get("href")
                 info_dict.update({u"区域": region})
                 info_dict.update({u"楼盘名称":name})
                 info_dict.update({u"链接":href})
 
                 #区域
                 district = loupan_info.find_next_sibling("td")
-                info_dict.update({u"城区": district})
+                info_dict.update({u"城区": district.text.strip()})
 
                 #签约套数
                 sale = district.find_next_sibling("td")
@@ -199,7 +183,7 @@ def do_jilu_spider(db_jilu, link):
                 for number in salenumbers:
                     original = number["class"]
                     new = transfer(original)
-                    salenum = new + salenum
+                    salenum = salenum + new
                 info_dict.update({u"签约套数": salenum})
 
                 #预定套数，一般为个位数
@@ -236,12 +220,12 @@ def do_jilu_spider(db_jilu, link):
 
 if __name__ == "__main__":
     command = "create table if not exists jilu (region TEXT primary key UNIQUE, name TEXT, href TEXT, district TEXT, " \
-              "salecount TEXT, reservedcount TEXT, area TEXT, averageprice TEXT, flag TEXT)"
-    db_chengjiao = SQLiteWraper('tmsf-jilu.db', command)
+              "salecount TEXT, reservedcount TEXT, area TEXT, averageprice TEXT)"
+    db_jilu = SQLiteWraper('tmsf-jilu.db', command)
 
     href = u"http://www.tmsf.com/daily.htm"
     # 爬下所有的售房信息
 
-    do_jilu_spider(db_chengjiao, href)
+    do_jilu_spider(db_jilu, href)
 
 

@@ -72,7 +72,7 @@ def one_record_spider(ershoufang):
     visit = follow_info[1].strip()
     date = follow_info[2].strip()
     info_dict['关注人数'] =  concerned
-    info_dict['看房次数'] =  flovisitor
+    info_dict['看房次数'] =  visit
     info_dict['发布时间'] =  date
 
     unitPrice = ershoufang.find("div", {"class": "unitPrice"}).find("span").text
@@ -82,6 +82,7 @@ def one_record_spider(ershoufang):
     if detail:
         info_dict['备注'] =  detail
 
+    print info_dict
     return info_dict
 
 
