@@ -181,7 +181,7 @@ def recent_chengjiao_spider(href):
         #将info_list通过HTTP请求发送出去
         httpClient = None
         try:
-            headers = {"Content-type": "application/json; charset = UTF-8", "Accept": "application/json"}
+            headers = {"Content-Type": "application/json; charset = UTF-8", "Accept": "application/json"}
             httpClient = httplib.HTTPConnection("10.242.109.29", 80, timeout=30)
             httpClient.request("POST", "/ajax/open/result/record/housedeal", json.dumps(info_list, encoding = "utf-8", ensure_ascii=False), headers)
             response = httpClient.getresponse()
