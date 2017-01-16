@@ -144,15 +144,13 @@ def do_jilu_spider(db_jilu, link):
         return
 
     data = soup.find("div", {"class": "datanowin"})
+    regions_data = data.findAll("div")
     """
     将每个区域作为一个子节点获取出来
     可以用.children  find_next_sibling
     """
+    zhuchengqu, xiaoshan, yuhang, fuyang, dajiangdong =regions_data
     zhuchengqu = data.find("div", {"style": "display:block"})
-    xiaoshan = zhuchengqu.find_next_sibling("div")
-    yuhang = xiaoshan.find_next_sibling("div")
-    fuyang = yuhang.find_next_sibling("div")
-    dajiangdong = fuyang.find_next_sibling("div")
 
     regions = {zhuchengqu, xiaoshan, yuhang, fuyang, dajiangdong}
     url_header = "www.tmsf.com"

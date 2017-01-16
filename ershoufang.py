@@ -135,7 +135,6 @@ def ershoufang_spider(db_ershoufang, url_page, region):
         return
 
     ershoufang_list = soup.findAll("div", {"class": "info clear"})
-
     for ershoufang in ershoufang_list:
         info_dict = {}
 
@@ -186,7 +185,7 @@ def ershoufang_spider(db_ershoufang, url_page, region):
         db_ershoufang.execute(command, 1)
 
 
-def region_ershoufang_spider(db_ershoufang, region ):
+def region_ershoufang_spider(db_ershoufang, region):
     """
     爬取城区成交记录
     """
