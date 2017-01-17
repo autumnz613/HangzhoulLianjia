@@ -1,16 +1,10 @@
 <scheme name="WarmNeon copy" version="142" parent_scheme="Default">
-  <metaInfo>
-    <property name="created">2017-01-16T19:44:42</property>
-    <property name="ide">PyCharmCore</property>
-    <property name="ideVersion">2016.2.3.0.0</property>
-    <property name="modified">2017-01-16T19:45:24</property>
-    <property name="originalScheme">WarmNeon</property>
-  </metaInfo>
   <option name="LINE_SPACING" value="1.1" />
-  <option name="EDITOR_FONT_SIZE" value="14" />
+  <option name="EDITOR_FONT_SIZE" value="15" />
   <option name="CONSOLE_FONT_NAME" value="Consolas" />
+  <option name="CONSOLE_FONT_SIZE" value="14" />
   <option name="EDITOR_QUICK_DOC_FONT_SIZE" value="MEDIUM" />
-  <option name="EDITOR_FONT_NAME" value="DejaVu Sans Mono" />
+  <option name="EDITOR_FONT_NAME" value="Consolas" />
   <colors>
     <option name="ADDED_LINES_COLOR" value="395439" />
     <option name="ANNOTATIONS_COLOR" value="8178af" />
