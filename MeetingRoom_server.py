@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+"""
+1、根据会议室列表爬取选择日期内所有可用时间段，得到会议室相关信息，返回room_info_list
+2、根据用户楼层、时间段等需求，筛选room_info_list，筛选出符合条件的会议室信息selected_room_info
+3、根据selected_room_info，预定会议室
+"""
+
 import threading
 import sys
 import time
@@ -6,6 +12,7 @@ import datetime
 import requests
 import httplib
 import json
+from datetime import timedelta
 from bs4 import BeautifulSoup
 
 reload(sys)
@@ -18,32 +25,24 @@ now_time = now_date_time.time()
 room_info_list = []
 log_error = []
 
-
 login_header = {'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8','Accept-Encoding':'gzip, deflate','Accept-Language':'zh-CN,zh;q=0.8,en;q=0.6','Host':'login.netease.com','Origin':'https://login.netease.com','User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
 br_header = {'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8','Accept-Encoding':'gzip, deflate','Accept-Language':'zh-CN,zh;q=0.8,en;q=0.6','Host':'br.oa.netease.com','Origin':'https://br.oa.netease.com','User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
 
 #所有可预定的会议室
 A4_rooms = ['floor=104&room=1','floor=104&room=2','floor=104&room=5','floor=104&room=6','floor=104&room=9','floor=104&room=10','floor=104&room=13','floor=104&room=15']
-B1_rooms = ['floor=1&room=1']
 B3_rooms = ['floor=3&room=5','floor=3&room=7','floor=3&room=8']
-B3W_rooms = ['floor=203w&room=10','floor=203w&room=13','floor=203w&room=20','floor=203w&room=21']
 B4_rooms = ['floor=4&room=1','floor=4&room=4','floor=4&room=5','floor=4&room=8','floor=4&room=9','floor=4&room=13','floor=4&room=15']
-B5_rooms = ['floor=5&room=1','floor=5&room=4','floor=5&room=5','floor=5&room=8','floor=5&room=9','floor=5&room=10', 'floor=5&room=11','floor=5&room=13','floor=5&room=15']
 B6_rooms = ['floor=6&room=1','floor=6&room=5','floor=6&room=8','floor=6&room=9','floor=6&room=13']
 B7_rooms = ['floor=7&room=15','floor=7&room=21']
-B8_rooms = ['floor=8&room=3','floor=8&room=4','floor=8&room=7']
-C2_rooms = ['floor=9&room=1','floor=9&room=2','floor=9&room=3','floor=9&room=4']
-all_rooms = [A4_rooms,B1_rooms,B3_rooms,B3W_rooms,B4_rooms,B5_rooms,B6_rooms,B7_rooms,B8_rooms,C2_rooms]
-floor_dict = {"104":"A4","1":"B1","203w":"B3西","3":"B3","4":"B4","5":"B5","6":"B6","7":"B7","8":"B8","9":"C2"}
+all_rooms = [A4_rooms,B3_rooms,B4_rooms,B6_rooms,B7_rooms]
+floor_dict = {"104":"A4","3":"B3","4":"B4","6":"B6","7":"B7",}
+floor_dict_reverse = {"A4":"104", "B3":"3","B4":"4","B6":"6","B7":"7"}
 
 #视频会议室，包括部分需要电话预定的会议室，下同
-camera_rooms = ['floor=104&room=9','floor=4&room=5','floor=5&room=11','floor=6&room=9','floor=7&room=15','floor=8&room=3']
-#投影仪会议室
-projector_rooms = ['floor=203w&room=21','floor=3&room=5','floor=3&room=8','floor=4&room=15','floor=5&room=10','floor=5&room=11','floor=5&room=15','floor=7&room=21','floor=104&room=9','floor=104&room=15','floor=9&room=2','floor=9&room=3']
-#电视会议室
-TV_rooms = ['floor=203w&room=10','floor=203w&room=13','floor=203w&room=20','floor=3&room=7','floor=4&room=4','floor=4&room=5','floor=4&room=8','floor=4&room=9','floor=4&room=13','floor=5&room=1','floor=5&room=5','floor=5&room=8','floor=5&room=9','floor=5&room=11','floor=5&room=13','floor=5&room=15','floor=6&room=1','floor=6&room=5','floor=6&room=9','floor=6&room=13','floor=7&room=15','floor=8&room=3','floor=8&room=4','floor=8&room=7','floor=104&room=1','floor=104&room=2','floor=104&room=5','floor=104&room=6','floor=104&room=9','floor=104&room=10','floor=104&room=15','floor=9&room=1','floor=9&room=4']
-#电话会议室
-telephone_rooms = ['floor=203w&room=10','floor=203w&room=21','floor=3&room=5','floor=3&room=8','floor=5&room=1','floor=5&room=4','floor=5&room=5','floor=5&room=8','floor=5&room=9','floor=5&room=10','floor=5&room=11','floor=5&room=13','floor=6&room=1','floor=6&room=5','floor=6&room=8','floor=6&room=9','floor=6&room=13','floor=7&room=15','floor=8&room=3','floor=8&room=4', 'floor=8&room=7','floor=104&room=1','floor=104&room=2','floor=104&room=5','floor=104&room=6','floor=104&room=9','floor=104&room=10','floor=9&room=1','floor=9&room=2']
+video_rooms = ['floor=104&room=9','floor=4&room=5','floor=6&room=9','floor=7&room=15']
+TV_projector_rooms = ['floor=3&room=5','floor=3&room=8','floor=4&room=15','floor=5&room=10','floor=7&room=21','floor=3&room=7','floor=4&room=4','floor=4&room=5','floor=4&room=8','floor=4&room=9','floor=4&room=13','floor=6&room=1','floor=6&room=5','floor=6&room=9','floor=6&room=13','floor=7&room=15','floor=104&room=2','floor=104&room=5','floor=104&room=6','floor=104&room=9','floor=104&room=10','floor=104&room=15']
+telephone_rooms = ['floor=3&room=5','floor=3&room=8','floor=6&room=1','floor=6&room=5','floor=6&room=8','floor=6&room=9','floor=6&room=13','floor=7&room=15','floor=104&room=2','floor=104&room=5','floor=104&room=6','floor=104&room=9','floor=104&room=10']
+
 
 
 def login():
@@ -65,107 +64,171 @@ def login():
         log_error.append(e.message)
 
 
-#处理单个会议室信息
-def one_room_reserved(room_names, request_hour, date = now_date, TV = False, camera = False, projector = False, telephone = False ):
+#检查所有用户参数是否正确
+def check_params(request_hour,request_date,TV_projector,video,telephone):
+    point_date = now_date
+    TV_projector_param = False
+    video_param = False
+    telephone_param = False
+    hour = 0
+    nums = 0
+    try:
+        hour = int(request_hour)
+        if (hour <= 0):
+            log_error.append("时间太短")
+        if ( hour > 12):
+            log_error.append("时间太长")
+    except Exception, e:
+        log_error.append("输入的时长不是数字")
+        log_error.append(e.message)
+
+    if (request_date == "0"):
+        point_date = now_date
+    else:
+        try:
+            point_date = datetime.datetime.strptime(request_date,'%Y-%m-%d').date()
+            if (point_date < now_date):
+                log_error.append("输入日期是过去的时间！")
+            #日期为七天以内
+            seven_day = timedelta(days=7)
+            if(now_date + seven_day < point_date):
+                log_error.append("只能预定七天以内的会议室！")
+        except Exception,e:
+            log_error.append("输入日期格式不正确！")
+            log_error.append(e.message)
+
+    if( TV_projector == "0"):
+        TV_projector_param = False
+    elif (TV_projector == "1"):
+        TV_projector_param = True
+    else:
+        log_error.append("电视/投影仪参数不正确")
+
+    if( video == "0"):
+        video_param = False
+    elif (video == "1"):
+        video_param = True
+    else:
+        log_error.append("视频参数不正确")
+
+    if( telephone == "0"):
+        telephone_param = False
+    elif (telephone == "1"):
+        telephone_param = True
+    else:
+        log_error.append("电话参数不正确")
+
+    return hour, point_date, TV_projector_param, video_param, telephone_param
+
+
+"""
+一、获取room_info_list
+1、多线程爬取所有会议室列表
+2、按照日期筛选出时间列表timelist
+3、根据timelist得到可用会议室信息room_info_list
+"""
+def inquire_meeting_rooms(room_names, request_hour,request_date, TV_projector = False, video = False,  telephone = False ):
     session = requests.Session()
     for room_name in room_names:
         #判断是否含有满足条件的会议室
-        has_TV = True
-        has_camera = True
-        has_projector = True
+        has_TV_project = True
+        has_video = True
         has_telephone = True
-        if (TV == True):
-            has_TV = contains_meeting_room(room_name, TV_rooms)
-        if (camera == True):
-            has_camera = contains_meeting_room(room_name, camera_rooms)
-        if (projector == True):
-            has_projector = contains_meeting_room(room_name, projector_rooms)
+        if (TV_projector == True):
+            has_TV_project = contains_meeting_room(room_name, TV_projector_rooms)
+        if (video == True):
+            has_video = contains_meeting_room(room_name, video_rooms)
         if (telephone == True):
             has_telephone = contains_meeting_room(room_name, telephone_rooms)
 
-        if (has_TV and has_camera and has_projector and has_telephone):
+        if (has_TV_project and has_video and has_telephone):
             room_url = 'http://br.oa.netease.com/hzroom/action/bookroom/?' + room_name
             req = session.get(room_url, headers =br_header, cookies = cookies)
             soup = BeautifulSoup(req.text, 'lxml')
             checklists = soup.findAll('tr', {'class': 'checklist'})
-            meeting_room_timetable(checklists, room_name, date, request_hour)
+
+            time_list, time_flag = get_time_list(checklists, request_date)
+            #根据timelist计算是否有满足条件的时间段
+            if (len(time_list) > 1 or time_flag == 1):
+                fill_room_info_list(room_name, time_list, request_date, request_hour)
 
 
-#找到所有预定时间，并将符合期望的加入到timelist中
-def meeting_room_timetable(checklists,room_name, date, request_hour ):
+#判断一个列表中是否含有指定会议室
+def contains_meeting_room(meeting_room, room_list):
+    if(len(room_list) == 0 ):
+        return False
+    for room in room_list:
+        if( room == meeting_room):
+            return True
+        else:
+            continue
+    return False
+
+
+#找到所有可预定时间，并将符合期望的加入到timelist中
+def get_time_list(checklists, require_date):
     timelist = []
-    flag = 0
-    start_time = ""
-    end_time = ""
+    time_flag = 0
+
     for checklist in checklists:
         try:
             start_time = checklist.find_all('td',{'width':'21%'})[0].string
             end_time = checklist.find_all('td',{'width':'21%'})[1].string
-        except Exception, e:
-            log_error.append(e.message)
-
-        #过滤时间，保留与期望date符合的选项
-        start_date_time = datetime.datetime.strptime(start_time,"%Y-%m-%d %H:%M")
-        start_end_time = datetime.datetime.strptime(end_time,"%Y-%m-%d %H:%M")
-        if (start_date_time.date() == date and start_date_time > now_date_time):
-            timelist.append(start_date_time.time())
-            timelist.append(start_end_time.time())
-        try:
-            if (start_date_time.date() > date):
-                #若当天没有任何预定，则将整天时间都插入,定义一个flag,同样执行计算日期
+            #过滤时间，保留与期望date符合的选项
+            start_date_time = datetime.datetime.strptime(start_time,"%Y-%m-%d %H:%M")
+            end_date_time = datetime.datetime.strptime(end_time,"%Y-%m-%d %H:%M")
+            if (start_date_time.date() == require_date and end_date_time.date() == require_date and start_date_time > now_date_time):
+                timelist.append(start_date_time)
+                timelist.append(end_date_time)
+            #对于连续多天的预定处理,关注下B6-1
+            if(start_date_time.date() == require_date and end_date_time.date() > require_date):
+                pass
+            if (start_date_time.date() > require_date):
+                #若当天没有任何预定，则标记
                 if(len(timelist) == 0):
-                    flag = 1
+                    time_flag = 1
                 break
         except Exception, e:
             log_error.append(e.message)
-
-    #根据timelist计算是否有满足条件的时间段
-    if (len(timelist) > 1 or flag == 1):
-        compute_time(room_name, timelist, date, request_hour)
+    return timelist, time_flag
 
 
-#处理时间列表
-def compute_time(room_name, timelist, date, request_hour):
-    special_note = ""
-    earlist_time = datetime.time(9, 30)
-    latest_time = datetime.time(22, 00)
-    if (date == now_date):
-        if( now_time > earlist_time):
-            earlist_time = now_time
+#根据timelist，填充room_info_list
+def fill_room_info_list(room_name, timelist, request_date, request_hour):
+    earlist_time_string = request_date.strftime("%Y-%m-%d ") + "09:30"
+    earlist_time = datetime.datetime.strptime(earlist_time_string,"%Y-%m-%d %H:%M")
+    latest_time_string = request_date.strftime("%Y-%m-%d ") + "21:00"
+    latest_time = datetime.datetime.strptime(latest_time_string,"%Y-%m-%d %H:%M")
+    if (request_date == now_date):
+        if( now_date_time > earlist_time):
+            earlist_time = now_date_time
     timelist.insert(0, earlist_time)
     timelist.append(latest_time)
 
-    timelist_len = len(timelist)
     floor_number, room_number = get_room_name(room_name)
     i = 0
-    while i < timelist_len:
+    while i < len(timelist):
         begin_time = timelist[i]
         end_time = timelist[i+1]
-        begin_time_string = begin_time.strftime("%H:%M")
-        end_time_string = end_time.strftime("%H:%M")
         i += 2
-        beigin_minute = begin_time.minute/60.0
-        beagin_hour = begin_time.hour + beigin_minute
+
+        begin_minute = begin_time.minute/60.0
+        begin_hour = begin_time.hour + begin_minute
         end_minute = end_time.minute/60.0
         end_hour = end_time.hour + end_minute
-        time_difference = end_hour - beagin_hour
+        time_difference = end_hour - begin_hour
 
         if (time_difference >= request_hour):
-            if(floor_number == "B5"):
-                special_note = "(只接受在线游戏事业部(杭州)员工预订)"
-            elif (floor_number == "B8"):
-                special_note = "(只接受在线游戏事业部(杭州)及雷火工作室员工预订)"
-            elif (floor_number == "B3西"):
-                special_note = "(只接受运营中心员工预订)"
-            elif (room_name == "floor=104&room=1" or room_name == "floor=1&room=1" or floor_number == "C2"):
-                special_note = "(预订请联系前台，电话：20000)"
-            room_message = floor_number + "楼" + room_number + "可预定时间：" + begin_time_string + "--" + end_time_string + " " + special_note
-            room_info_list.append(room_message)
+            room_info = []
+            room_info.append(floor_number)
+            room_info.append(room_number)
+            room_info.append(begin_time)
+            room_info.append(end_time)
+            room_info_list.append(room_info)
 
 
 #解析会议室具体地址
 def get_room_name(room_name):
-
     floor_number = ""
     room_number = ""
     try:
@@ -184,92 +247,21 @@ def get_room_name(room_name):
         room_number = "新会议室"
     elif (room_name == "floor=3&room=8"):
         room_number = "培训教室"
-    elif (room_name == "floor=9&room=1"):
-        room_number = "VIP会议室2"
-    elif (room_name == "floor=9&room=2"):
-        room_number = "VIP会议室"
-    elif (room_name == "floor=9&room=3"):
-        room_number = "大培训教室"
-    elif (room_name == "floor=9&room=4"):
-        room_number = "视频会议室"
     else:
         room_number += "号会议室"
     return floor_dict[floor_number], room_number
 
 
-#判断一个列表中是否含有指定会议室
-def contains_meeting_room(meeting_room, room_list):
-    if(len(room_list) == 0 ):
-        return False
-    for room in room_list:
-        if( room == meeting_room):
-            return True
-        else:
-            continue
-    return False
-
-def do_reserved_meeting_room(job_id,request_hour,date,TV,camera,projector,telephone,pointed_floor):
+def search_and_reserve_meeting_room(job_id,pointed_floor,request_hour,request_date,TV_projector,video,telephone,person_num):
     errors = ""
-    room_message = ""
-    hour = 0
-    point_date = now_date
-    TV_para = False
-    camera_para = False
-    projector_para = False
-    telephone_para = False
-    try:
-        hour = int(request_hour)
-        if (hour <= 0):
-            log_error.append("时间太短")
-        if ( hour > 12):
-            log_error.append("时间太长")
-    except Exception, e:
-        log_error.append("输入的时长不是数字")
-        log_error.append(e.message)
-
-    if (date == "0"):
-        point_date = now_date
-    else:
-        try:
-            point_date = datetime.datetime.strptime(date,'%Y-%m-%d').date()
-            if (point_date < now_date):
-                log_error.append("输入日期不正确！")
-        except Exception,e:
-            log_error.append("输入日期格式不正确！")
-            log_error.append(e.message)
-
-    if( TV == "0"):
-        TV_para = False
-    elif (TV == "1"):
-        TV_para = True
-    else:
-        log_error.append("电视参数不正确")
-
-    if( camera == "0"):
-        camera_para = False
-    elif (camera == "1"):
-        camera_para = True
-    else:
-        log_error.append("视频参数不正确")
-
-    if( projector == "0"):
-        projector_para = False
-    elif (projector == "1"):
-        projector_para = True
-    else:
-        log_error.append("投影仪参数不正确")
-
-    if( telephone == "0"):
-        telephone_para = False
-    elif (telephone == "1"):
-        telephone_para = True
-    else:
-        log_error.append("电话参数不正确")
-
+    message = ""
+    #检查用户参数是否正确
+    hour, point_date, TV_projector_param, video_param, telephone_param = check_params(request_hour,request_date,TV_projector,video,telephone)
+    #多线程获取所有会议室room_info_list
     threads = []
     if (pointed_floor == "0"):
         for rooms in all_rooms:
-            t = threading.Thread(target=one_room_reserved ,args = (rooms, hour, point_date, TV_para, camera_para, projector_para, telephone_para) )
+            t = threading.Thread(target=inquire_meeting_rooms ,args = (rooms, hour, point_date, TV_projector_param, video_param, telephone_param) )
             threads.append(t)
         for t in threads:
             t.setDaemon(True)
@@ -277,28 +269,14 @@ def do_reserved_meeting_room(job_id,request_hour,date,TV,camera,projector,teleph
         for t in threads:
             t.join()
     else:
-        floor_roooms_dict = {"A4":A4_rooms,"B1":B1_rooms,"B3":B3_rooms,"B3W":B3W_rooms,"B4":B4_rooms,"B5":B5_rooms,"B6":B6_rooms,"B7":B7_rooms,"B8":B8_rooms,"C2":C2_rooms}
+        floor_roooms_dict = {"A4":A4_rooms,"B3":B3_rooms,"B4":B4_rooms,"B6":B6_rooms,"B7":B7_rooms,}
         if (floor_roooms_dict.has_key(pointed_floor)):
-            for rooms in floor_roooms_dict[pointed_floor]:
-                t = threading.Thread(target=one_room_reserved ,args = (rooms, hour, point_date, TV_para, camera_para, projector_para, telephone_para) )
-                threads.append(t)
-            for t in threads:
-                t.setDaemon(True)
-                t.start()
-            for t in threads:
-                t.join()
+            inquire_meeting_rooms(floor_roooms_dict[pointed_floor], hour, point_date, TV_projector_param, video_param, telephone_param)
         else:
             log_error.append("楼层参数不正确，请重新输入")
 
-    room_info_list.sort()
 
-    if(len(room_info_list) == 0):
-        room_message = "没有找到合适的会议室"
-    else:
-        for message in room_info_list:
-            room_message += message
-            room_message += "\n"
-
+    #发送预定结果给服务器
     if(len(log_error) == 0):
         status = 1
     else:
@@ -306,8 +284,11 @@ def do_reserved_meeting_room(job_id,request_hour,date,TV,camera,projector,teleph
         for err in log_error:
             errors += err
     is_over = 1
+    for room_info in room_info_list:
+        message += (room_info[0] + "楼" + room_info[1] + " " + room_info[2].strftime("%Y-%m-%d %H:%M") + "--" + room_info[3].strftime("%Y-%m-%d %H:%M") + "\n")
 
-    result = {'user_job_id': job_id, 'message': room_message, 'status': status, 'is_over': is_over, 'error_log': errors}
+
+    result = {'user_job_id': job_id, 'message': message, 'status': status, 'is_over': is_over, 'error_log': errors}
     httpClient = None
     try:
         headers = {"Content-Type": "application/json; charset = UTF-8", "Accept": "application/json"}
@@ -326,7 +307,7 @@ def do_reserved_meeting_room(job_id,request_hour,date,TV,camera,projector,teleph
 job_id:系统参数，必填。
 reques_hour:数字字符串，定义大于0小于12。必填。
 date：日期，格式为"2017-01-06"。若不传参，默认为当天。选填
-TV,camera,projeator,telephone:"0"表示不选择，"1"表示选择。默认为0.选填。
+TV,video,projeator,telephone:"0"表示不选择，"1"表示选择。默认为0.选填。
 """
 if __name__ == "__main__":
     cookies = login()
@@ -335,21 +316,20 @@ if __name__ == "__main__":
         # request_hour = sys.argv[2]
         # date = sys.argv[3]
         # TV = sys.argv[4]
-        # camera = sys.argv[5]
+        # video = sys.argv[5]
         # projector = sys.argv[6]
         # telephone = sys.argv[7]
         job_id = 11212
         request_hour = "1"
-        date = "2017-01-16"
-        TV = "0"
-        camera = "0"
-        projector = "0"
+        request_date = "2017-01-16"
+        TV_projector = "0"
+        video = "0"
         telephone = "0"
-        pointed_floor = "0"
-
-        do_reserved_meeting_room(job_id,request_hour,date,TV,camera,projector,telephone,pointed_floor)
+        pointed_floor = "B6"
+        user_name = "hzsongjie1"
+        period = "3"
+        user_note = ""
+        person_num = ""
+        search_and_reserve_meeting_room(job_id,pointed_floor,request_hour,request_date,TV_projector,video,telephone,person_num)
     except Exception, e:
         print e
-        print ("系统参数调用有误")
-
-
