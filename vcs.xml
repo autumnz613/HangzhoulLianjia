@@ -26,6 +26,10 @@
           <option name="url" value="https://github.com/aosabook/500lines" />
           <option name="userName" value="" />
         </UrlAndUserName>
+        <UrlAndUserName>
+          <option name="url" value="ssh://git@g.hz.netease.com:22222/hzsongjie1/TestProject.git" />
+          <option name="userName" value="" />
+        </UrlAndUserName>
       </list>
     </option>
     <option name="cloneParentDir" value="D:\Workspace" />
